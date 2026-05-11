@@ -1,0 +1,71 @@
+name: 🚀 Deploy PHP Docker app on push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker-deploy:
+    name: 🐳 Build, Test and Deploy PHP Container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: ✅ Run PHP syntax check
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
+
+      - name: 📤 Upload project files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          source: "./"
+          target: "/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/workrelated"
+          strip_components: 1
+
+      - name: 🐳 Build and restart Docker container on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+
+            APP_DIR="/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/workrelated"
+            CONTAINER_NAME="devops-asgmt-app"
+            IMAGE_NAME="devops-asgmt-app:latest"
+
+            cd "$APP_DIR"
+
+            echo "Current directory:"
+            pwd
+
+            echo "Files:"
+            ls -la
+
+            if [ ! -f Dockerfile ]; then
+              echo "ERROR: Dockerfile not found in $APP_DIR"
+              exit 1
+            fi
+
+            docker stop "$CONTAINER_NAME" || true
+            docker rm "$CONTAINER_NAME" || true
+
+            docker build -t "$IMAGE_NAME" .
+
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p 3040:80 \
+              "$IMAGE_NAME"
+
+            echo "Running containers:"
+            docker ps
