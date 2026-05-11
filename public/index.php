@@ -1,8 +1,4 @@
 <?php
-echo "CMP217 DevOps test deployment is working.";
-?>
-
-<?php
 
 session_start();
 
