@@ -7,7 +7,7 @@ on:
 
 jobs:
   test-build-deploy:
-    name: 🧪 Test, Build and Deploy
+    name: 🧪 Test, Staging and Production Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +29,7 @@ jobs:
           target: "/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/Code"
           strip_components: 1
 
-
-      - name: 🐳 Build and restart Docker container on server
+      - name: 🐳 Deploy to staging then production
         uses: appleboy/ssh-action@v1.0.3
         env:
           APP_URL: ${{ secrets.APP_URL }}
@@ -58,8 +57,9 @@ jobs:
             set -e
 
             APP_DIR="/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/Code"
-            CONTAINER_NAME="devops-asgmt-app"
             IMAGE_NAME="devops-asgmt-app:latest"
+            STAGING_CONTAINER="devops-asgmt-staging"
+            PRODUCTION_CONTAINER="devops-asgmt-production"
 
             cd "$APP_DIR"
 
@@ -113,17 +113,44 @@ jobs:
               exit 1
             fi
 
-            docker stop "$CONTAINER_NAME" || true
-            docker rm "$CONTAINER_NAME" || true
+            echo "Freeing required ports if existing containers are using them..."
+            docker ps --format '{{.ID}} {{.Ports}} {{.Names}}' | grep ':3041->' | awk '{print $1}' | xargs -r docker stop
+            docker ps -a --format '{{.ID}} {{.Ports}} {{.Names}}' | grep ':3041->' | awk '{print $1}' | xargs -r docker rm
+            docker ps --format '{{.ID}} {{.Ports}} {{.Names}}' | grep ':3040->' | awk '{print $1}' | xargs -r docker stop
+            docker ps -a --format '{{.ID}} {{.Ports}} {{.Names}}' | grep ':3040->' | awk '{print $1}' | xargs -r docker rm
 
+            echo "Building Docker image..."
             docker build -t "$IMAGE_NAME" .
 
+            echo "Deploying staging container on port 3041..."
+            docker stop "$STAGING_CONTAINER" || true
+            docker rm "$STAGING_CONTAINER" || true
+
             docker run -d \
-              --name "$CONTAINER_NAME" \
+              --name "$STAGING_CONTAINER" \
+              --restart unless-stopped \
+              --add-host=host.docker.internal:host-gateway \
+              -p 3041:80 \
+              "$IMAGE_NAME"
+
+            echo "Testing staging container..."
+            sleep 5
+            curl -I http://localhost:3041 || exit 1
+
+            echo "Staging test passed. Deploying production container on port 3040..."
+            docker stop "$PRODUCTION_CONTAINER" || true
+            docker rm "$PRODUCTION_CONTAINER" || true
+
+            docker run -d \
+              --name "$PRODUCTION_CONTAINER" \
               --restart unless-stopped \
               --add-host=host.docker.internal:host-gateway \
               -p 3040:80 \
               "$IMAGE_NAME"
+
+            echo "Testing production container..."
+            sleep 5
+            curl -I http://localhost:3040 || exit 1
 
             echo "Running containers:"
             docker ps
