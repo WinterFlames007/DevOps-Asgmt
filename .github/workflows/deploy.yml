@@ -6,15 +6,15 @@ on:
       - main
 
 jobs:
-  docker-deploy:
-    name: 🐳 Build, Test and Deploy PHP Container
+  test-build-deploy:
+    name: 🧪 Test, Build and Deploy
     runs-on: ubuntu-latest
 
     steps:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
-      - name: ✅ Run PHP syntax check
+      - name: 🧪 PHP syntax check
         run: |
           find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
 
@@ -26,7 +26,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 22
           source: "./"
-          target: "/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/workrelated"
+          target: "/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/Code"
           strip_components: 1
 
       - name: 🐳 Build and restart Docker container on server
@@ -39,7 +39,7 @@ jobs:
           script: |
             set -e
 
-            APP_DIR="/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/workrelated"
+            APP_DIR="/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/Code"
             CONTAINER_NAME="devops-asgmt-app"
             IMAGE_NAME="devops-asgmt-app:latest"
 
@@ -48,7 +48,7 @@ jobs:
             echo "Current directory:"
             pwd
 
-            echo "Files:"
+            echo "Files in deployment directory:"
             ls -la
 
             if [ ! -f Dockerfile ]; then
