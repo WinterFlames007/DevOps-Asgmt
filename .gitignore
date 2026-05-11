@@ -1,0 +1,26 @@
+# Environment and secret files
+.env
+.env.local
+config/config.php
+config/secrets.php
+
+# Composer dependencies
+/vendor/
+
+# Node dependencies if ever added
+/node_modules/
+
+# Logs
+*.log
+logs/
+storage/logs/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
