@@ -29,13 +29,31 @@ jobs:
           target: "/home/s2209682-node/htdocs/s2209682n.ncgrp.xyz/Devops/Asgmt/Summative/Code"
           strip_components: 1
 
+
       - name: 🐳 Build and restart Docker container on server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_PUBLIC_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_FROM_EMAIL: ${{ secrets.SMTP_FROM_EMAIL }}
+          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
         with:
           host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: 22
+          envs: APP_URL,DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASS,STRIPE_PUBLIC_KEY,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,SMTP_HOST,SMTP_USER,SMTP_PASS,SMTP_PORT,SMTP_FROM_EMAIL,SMTP_FROM_NAME
           script: |
             set -e
 
@@ -44,6 +62,45 @@ jobs:
             IMAGE_NAME="devops-asgmt-app:latest"
 
             cd "$APP_DIR"
+
+            echo "Creating secure config.php from GitHub Secrets..."
+
+            cat > config/config.php <<PHP
+            <?php
+
+            return [
+                'app' => [
+                    'name' => 'WorkRelated E-Commerce',
+                    'url' => '$APP_URL',
+                    'session_name' => 'workrelated_session',
+                ],
+
+                'db' => [
+                    'host' => '$DB_HOST',
+                    'port' => '$DB_PORT',
+                    'dbname' => '$DB_NAME',
+                    'username' => '$DB_USER',
+                    'password' => '$DB_PASS',
+                ],
+
+                'stripe' => [
+                    'publishable_key' => '$STRIPE_PUBLIC_KEY',
+                    'secret_key' => '$STRIPE_SECRET_KEY',
+                    'webhook_secret' => '$STRIPE_WEBHOOK_SECRET',
+                    'currency' => 'gbp',
+                ],
+
+                'mail' => [
+                    'host' => '$SMTP_HOST',
+                    'username' => '$SMTP_USER',
+                    'password' => '$SMTP_PASS',
+                    'port' => $SMTP_PORT,
+                    'encryption' => 'tls',
+                    'from_email' => '$SMTP_FROM_EMAIL',
+                    'from_name' => '$SMTP_FROM_NAME'
+                ],
+            ];
+            PHP
 
             echo "Current directory:"
             pwd
@@ -61,15 +118,12 @@ jobs:
 
             docker build -t "$IMAGE_NAME" .
 
-
             docker run -d \
               --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               --add-host=host.docker.internal:host-gateway \
               -p 3040:80 \
               "$IMAGE_NAME"
-
-
 
             echo "Running containers:"
             docker ps
