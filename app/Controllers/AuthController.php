@@ -243,12 +243,11 @@ class AuthController extends Controller
         mysqli_stmt_execute($updateStmt);
 
         // Reset link
-        $resetLink = "https://yourdomain.com/reset-password?token=$token";
 
         // TODO: SEND EMAIL (next step)
         
 
-        $resetLink = "https://s2209682.ncgrp.xyz/reset-password?token=$token";
+        $resetLink = "https://s2209682n.ncgrp.xyz/reset-password?token=$token";
 
         $emailBody = "
             <h2>Password Reset Request</h2>
